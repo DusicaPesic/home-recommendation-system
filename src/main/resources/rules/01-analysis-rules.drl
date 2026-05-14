@@ -1,0 +1,204 @@
+package rules
+
+import com.splendor.assistant.model.facts.analysis.AlmostPurchasableCardFact;
+import com.splendor.assistant.model.BoardState;
+import com.splendor.assistant.model.Card;
+import com.splendor.assistant.model.CardEfficiency;
+import com.splendor.assistant.model.facts.analysis.CardEfficiencyFact;
+import com.splendor.assistant.model.facts.explanation.DecisionFact;
+import com.splendor.assistant.model.facts.explanation.DecisionLevel;
+import com.splendor.assistant.model.facts.analysis.DominantColorFact;
+import com.splendor.assistant.model.GamePhase;
+import com.splendor.assistant.model.facts.analysis.GamePhaseFact;
+import com.splendor.assistant.model.GameState;
+import com.splendor.assistant.model.GemColor;
+import com.splendor.assistant.model.GoalType;
+import com.splendor.assistant.model.Move;
+import com.splendor.assistant.model.facts.scoring.MoveScoreFact;
+import com.splendor.assistant.model.facts.scoring.MoveTotalScoreFact;
+import com.splendor.assistant.model.MoveType;
+import com.splendor.assistant.model.facts.analysis.NeededColorFact;
+import com.splendor.assistant.model.facts.analysis.OpponentThreatCardFact;
+import com.splendor.assistant.model.PlayerState;
+import com.splendor.assistant.model.facts.analysis.PurchasableCardFact;
+import com.splendor.assistant.model.facts.strategy.StrategicGoalFact;
+import com.splendor.assistant.model.facts.analysis.SupportsEfficiencyEngineFact;
+import com.splendor.assistant.model.facts.analysis.TokenLimitRiskFact;
+
+rule "Phase - early game"
+when
+    PlayerState(prestigePoints < 5)
+then
+    insertLogical(new GamePhaseFact(GamePhase.EARLY_GAME));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("GAME_PHASE", GamePhase.EARLY_GAME), DecisionFact.base("player has fewer than 5 prestige points"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Phase - mid game"
+when
+    PlayerState(prestigePoints >= 5, prestigePoints < 12)
+then
+    insertLogical(new GamePhaseFact(GamePhase.MID_GAME));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("GAME_PHASE", GamePhase.MID_GAME), DecisionFact.base("player has between 5 and 11 prestige points"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Phase - late game"
+when
+    PlayerState(prestigePoints >= 12)
+then
+    insertLogical(new GamePhaseFact(GamePhase.LATE_GAME));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("GAME_PHASE", GamePhase.LATE_GAME), DecisionFact.base("player has at least 12 prestige points"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Very high card efficiency"
+when
+    $card: Card(prestigePoints >= 3, totalCost <= 7)
+then
+    insertLogical(new CardEfficiencyFact($card, CardEfficiency.VERY_HIGH));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionFact.base($card.getId() + " has at least 3 points and total cost at most 7"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "High card efficiency"
+when
+    $card: Card(prestigePoints >= 1, totalCost <= 5)
+then
+    insertLogical(new CardEfficiencyFact($card, CardEfficiency.HIGH));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.HIGH), DecisionFact.base($card.getId() + " has at least 1 point and total cost at most 5"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Low card efficiency"
+when
+    $card: Card(totalCost > 8, prestigePoints <= 2)
+then
+    insertLogical(new CardEfficiencyFact($card, CardEfficiency.LOW));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.LOW), DecisionFact.base($card.getId() + " costs more than 8 and gives at most 2 points"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Dominant color by efficient bonuses"
+when
+    $color: GemColor()
+    Number(intValue >= 2) from accumulate(
+        Card(colorBonus == $color, $card: this)
+        and CardEfficiencyFact(card == $card, efficiency in (CardEfficiency.VERY_HIGH, CardEfficiency.HIGH)),
+        count($card)
+    )
+then
+    insertLogical(new DominantColorFact($color));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("DOMINANT_COLOR", $color), DecisionFact.base("at least two efficient cards give " + $color + " bonus"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Dominant color by efficient requirements"
+when
+    $color: GemColor()
+    Number(intValue >= 2) from accumulate(
+        Card(costOf($color) > 0, $card: this)
+        and CardEfficiencyFact(card == $card, efficiency in (CardEfficiency.VERY_HIGH, CardEfficiency.HIGH)),
+        count($card)
+    )
+then
+    insertLogical(new DominantColorFact($color));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("DOMINANT_COLOR", $color), DecisionFact.base("at least two efficient cards require " + $color), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Purchasable card"
+when
+    $player: PlayerState()
+    $card: Card()
+    eval($player.canPay($card))
+then
+    insertLogical(new PurchasableCardFact($card));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("PURCHASABLE_CARD", $card), DecisionFact.base("player can pay " + $card.getId() + " using tokens, bonuses and gold"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Almost purchasable card"
+when
+    $player: PlayerState()
+    $card: Card()
+    eval($player.missingTokensFor($card) <= 2)
+then
+    insertLogical(new AlmostPurchasableCardFact($card));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("ALMOST_PURCHASABLE_CARD", $card), DecisionFact.base("player misses at most two tokens for " + $card.getId()), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Opponent threat card"
+when
+    GameState($opponent: opponent)
+    $card: Card()
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.VERY_HIGH)
+    eval($opponent.missingTokensFor($card) <= 2)
+then
+    insertLogical(new OpponentThreatCardFact($card));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("OPPONENT_THREAT_CARD", $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("OPPONENT_THREAT_CARD", $card), DecisionFact.base("opponent misses at most two tokens for " + $card.getId()), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Needed color for very efficient visible card"
+when
+    $player: PlayerState()
+    $color: GemColor()
+    $card: Card()
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.VERY_HIGH)
+    AlmostPurchasableCardFact(card == $card)
+    eval($player.needsColorFor($card, $color))
+then
+    insertLogical(new NeededColorFact($color));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("NEEDED_COLOR", $color), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("NEEDED_COLOR", $color), DecisionFact.analysis("ALMOST_PURCHASABLE_CARD", $card), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+end
+
+rule "Needed color for reserved card"
+when
+    $player: PlayerState()
+    $color: GemColor()
+    $card: Card()
+    eval($player.hasReserved($card))
+    eval($player.missingTokensFor($card) <= 3)
+    eval($player.needsColorFor($card, $color))
+then
+    insertLogical(new NeededColorFact($color));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("NEEDED_COLOR", $color), DecisionFact.base("reserved card " + $card.getId() + " needs " + $color), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Card supports efficiency engine by dominant bonus"
+when
+    $card: Card($color: colorBonus)
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.VERY_HIGH)
+    DominantColorFact(color == $color)
+then
+    insertLogical(new SupportsEfficiencyEngineFact($card));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionFact.analysis("DOMINANT_COLOR", $color), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+end
+
+rule "Card supports efficiency engine by future cost"
+when
+    $card: Card($color: colorBonus)
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.HIGH)
+    Card(this != $card, costOf($color) > 0, $target: this)
+    CardEfficiencyFact(card == $target, efficiency == CardEfficiency.VERY_HIGH)
+then
+    insertLogical(new SupportsEfficiencyEngineFact($card));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.HIGH), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionFact.analysis("CARD_EFFICIENCY", $target, CardEfficiency.VERY_HIGH), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+end
+
+rule "Reserved very high card supports engine if near playable"
+when
+    $player: PlayerState()
+    $card: Card()
+    eval($player.hasReserved($card))
+    eval($player.missingTokensFor($card) <= 3)
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.VERY_HIGH)
+then
+    insertLogical(new SupportsEfficiencyEngineFact($card));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionLevel.ANALYSIS, "analysis derived from previous analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionFact.base("reserved card " + $card.getId() + " can be played soon"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+
+rule "Token limit risk"
+when
+    PlayerState(totalTokens >= 9)
+then
+    insertLogical(new TokenLimitRiskFact());
+    insertLogical(DecisionFact.of(DecisionFact.analysis("TOKEN_LIMIT_RISK"), DecisionFact.base("player has at least 9 tokens"), DecisionLevel.ANALYSIS, "analysis derived from base fact"));
+end
+

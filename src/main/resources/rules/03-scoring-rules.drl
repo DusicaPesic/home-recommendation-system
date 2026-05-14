@@ -1,0 +1,210 @@
+package rules
+
+import com.splendor.assistant.model.facts.analysis.AlmostPurchasableCardFact;
+import com.splendor.assistant.model.BoardState;
+import com.splendor.assistant.model.Card;
+import com.splendor.assistant.model.CardEfficiency;
+import com.splendor.assistant.model.facts.analysis.CardEfficiencyFact;
+import com.splendor.assistant.model.facts.explanation.DecisionFact;
+import com.splendor.assistant.model.facts.explanation.DecisionLevel;
+import com.splendor.assistant.model.facts.analysis.DominantColorFact;
+import com.splendor.assistant.model.GamePhase;
+import com.splendor.assistant.model.facts.analysis.GamePhaseFact;
+import com.splendor.assistant.model.GameState;
+import com.splendor.assistant.model.GemColor;
+import com.splendor.assistant.model.GoalType;
+import com.splendor.assistant.model.Move;
+import com.splendor.assistant.model.facts.scoring.MoveScoreFact;
+import com.splendor.assistant.model.facts.scoring.MoveTotalScoreFact;
+import com.splendor.assistant.model.MoveType;
+import com.splendor.assistant.model.facts.analysis.NeededColorFact;
+import com.splendor.assistant.model.facts.analysis.OpponentThreatCardFact;
+import com.splendor.assistant.model.PlayerState;
+import com.splendor.assistant.model.facts.analysis.PurchasableCardFact;
+import com.splendor.assistant.model.facts.strategy.StrategicGoalFact;
+import com.splendor.assistant.model.facts.analysis.SupportsEfficiencyEngineFact;
+
+rule "Score buy high efficiency card"
+when
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    StrategicGoalFact(type == GoalType.BUY_CARD, card == $card)
+then
+    insertLogical(new MoveScoreFact($move, 40, "buying a very efficient card that supports the engine", DecisionFact.goal(GoalType.BUY_CARD, $card)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Score buy dominant color"
+when
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    StrategicGoalFact(type == GoalType.BUILD_DOMINANT_COLOR, color == $card.colorBonus)
+then
+    insertLogical(new MoveScoreFact($move, 20, "buying a card that develops the dominant color", DecisionFact.goal(GoalType.BUILD_DOMINANT_COLOR, $card.getColorBonus())));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.BUILD_DOMINANT_COLOR, $card.getColorBonus()), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Score buy supporting engine"
+when
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    SupportsEfficiencyEngineFact(card == $card)
+then
+    insertLogical(new MoveScoreFact($move, 20, "card supports the high efficiency engine", DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionLevel.MOVE_SCORE, "move score derived from analysis"));
+end
+
+rule "Score buy points in late game"
+when
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    GamePhaseFact(phase == GamePhase.LATE_GAME)
+    eval($card.getPrestigePoints() > 0)
+then
+    insertLogical(new MoveScoreFact($move, 30, "late game favors cards with points", DecisionFact.analysis("GAME_PHASE", GamePhase.LATE_GAME), DecisionFact.base($card.getId() + " gives prestige points")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.analysis("GAME_PHASE", GamePhase.LATE_GAME), DecisionLevel.MOVE_SCORE, "move score derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base($card.getId() + " gives prestige points"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Score finishing move"
+when
+    $player: PlayerState($points: prestigePoints)
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    eval($points + $card.getPrestigePoints() >= 15)
+then
+    insertLogical(new MoveScoreFact($move, 150, "buying this card ends the game by reaching 15 points", DecisionFact.base("player reaches at least 15 prestige points after buying " + $card.getId())));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base("player reaches at least 15 prestige points after buying " + $card.getId()), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Penalty inefficient card outside late game"
+when
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.LOW)
+    not GamePhaseFact(phase == GamePhase.LATE_GAME)
+then
+    insertLogical(new MoveScoreFact($move, -20, "inefficient card is not good before the late game", DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.LOW), DecisionFact.base("game is not in late phase")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.LOW), DecisionLevel.MOVE_SCORE, "move score derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base("game is not in late phase"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Score reserve very efficient card"
+when
+    $move: Move(type == MoveType.RESERVE_CARD, $card: card)
+    StrategicGoalFact(type == GoalType.RESERVE_CARD, card == $card)
+then
+    insertLogical(new MoveScoreFact($move, 35, "reserving a very efficient card that fits the plan", DecisionFact.goal(GoalType.RESERVE_CARD, $card)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.RESERVE_CARD, $card), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Score reserve blocking card"
+when
+    $move: Move(type == MoveType.RESERVE_CARD, $card: card)
+    StrategicGoalFact(type == GoalType.BLOCK_OPPONENT, card == $card)
+then
+    insertLogical(new MoveScoreFact($move, 30, "reservation blocks the opponent threat card", DecisionFact.goal(GoalType.BLOCK_OPPONENT, $card)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.BLOCK_OPPONENT, $card), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Score play reserved card"
+when
+    $move: Move(type == MoveType.BUY_CARD, $card: card)
+    StrategicGoalFact(type == GoalType.PLAY_RESERVED_CARD, card == $card)
+then
+    insertLogical(new MoveScoreFact($move, 35, "playing a previously reserved card", DecisionFact.goal(GoalType.PLAY_RESERVED_CARD, $card)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.PLAY_RESERVED_CARD, $card), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Penalty reserve without engine or block"
+when
+    $move: Move(type == MoveType.RESERVE_CARD, $card: card)
+    not SupportsEfficiencyEngineFact(card == $card)
+    not OpponentThreatCardFact(card == $card)
+then
+    insertLogical(new MoveScoreFact($move, -20, "reserved card does not support the engine and does not block the opponent", DecisionFact.base($card.getId() + " does not support the engine and does not block opponent")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base($card.getId() + " does not support the engine and does not block opponent"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Penalty reserve clogging hand"
+when
+    $player: PlayerState(reservedCards.size() == 2)
+    $move: Move(type == MoveType.RESERVE_CARD, $card: card)
+    eval($player.missingTokensFor($card) > 4)
+then
+    insertLogical(new MoveScoreFact($move, -25, "third reservation can clog the player hand", DecisionFact.base("player already has two reserved cards and " + $card.getId() + " is far from playable")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base("player already has two reserved cards and " + $card.getId() + " is far from playable"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Score take needed color"
+when
+    $move: Move(type == MoveType.TAKE_TOKENS)
+    StrategicGoalFact(type == GoalType.COLLECT_TOKENS, $color: color)
+    eval($move.takes($color))
+then
+    insertLogical(new MoveScoreFact($move, 20, "taking a color needed for an efficient or reserved card", DecisionFact.goal(GoalType.COLLECT_TOKENS, $color)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.COLLECT_TOKENS, $color), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Score take dominant color"
+when
+    $move: Move(type == MoveType.TAKE_TOKENS)
+    DominantColorFact($color: color)
+    eval($move.takes($color))
+then
+    insertLogical(new MoveScoreFact($move, 10, "taking the dominant color", DecisionFact.analysis("DOMINANT_COLOR", $color)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.analysis("DOMINANT_COLOR", $color), DecisionLevel.MOVE_SCORE, "move score derived from analysis"));
+end
+
+rule "Score take three useful colors"
+when
+    $move: Move(type == MoveType.TAKE_TOKENS)
+    Number(intValue >= 2) from accumulate(
+        NeededColorFact($color: color) and eval($move.takes($color)),
+        count($color)
+    )
+    eval($move.takesThreeDifferentColors())
+then
+    insertLogical(new MoveScoreFact($move, 15, "taking three different tokens, at least two of them needed", DecisionFact.base("move takes three different colors and at least two are needed")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base("move takes three different colors and at least two are needed"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Penalty unneeded tokens under token limit risk"
+when
+    $move: Move(type == MoveType.TAKE_TOKENS)
+    StrategicGoalFact(type == GoalType.MANAGE_TOKEN_LIMIT)
+    not (NeededColorFact($color: color) and eval($move.takes($color)))
+then
+    insertLogical(new MoveScoreFact($move, -20, "taking unneeded tokens while managing the token limit", DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT), DecisionFact.base("move does not take any needed color")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT), DecisionLevel.MOVE_SCORE, "move penalty derived from strategic goal"));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base("move does not take any needed color"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Score buy for managing token limit"
+when
+    $move: Move(type == MoveType.BUY_CARD)
+    StrategicGoalFact(type == GoalType.MANAGE_TOKEN_LIMIT)
+then
+    insertLogical(new MoveScoreFact($move, 15, "buying spends tokens and helps manage the token limit", DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT)));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT), DecisionLevel.MOVE_SCORE, "move score derived from strategic goal"));
+end
+
+rule "Penalty taking over token limit"
+when
+    $player: PlayerState($total: totalTokens)
+    $move: Move(type == MoveType.TAKE_TOKENS)
+    StrategicGoalFact(type == GoalType.MANAGE_TOKEN_LIMIT)
+    eval($total + $move.getTakenTokenCount() > 10)
+then
+    insertLogical(new MoveScoreFact($move, -25, "taking tokens exceeds the limit of 10", DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT), DecisionFact.base("player would have more than 10 tokens after this move")));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT), DecisionLevel.MOVE_SCORE, "move penalty derived from strategic goal"));
+    insertLogical(DecisionFact.of(DecisionFact.move($move), DecisionFact.base("player would have more than 10 tokens after this move"), DecisionLevel.MOVE_SCORE, "move score derived from base fact"));
+end
+
+rule "Accumulate total score for move"
+salience -100
+when
+    $move: Move()
+    $score: Number() from accumulate(
+        MoveScoreFact(move == $move, $points: points),
+        sum($points)
+    )
+then
+    insertLogical(new MoveTotalScoreFact($move, $score.intValue()));
+    modify($move) { setScore($score.intValue()) };
+end
+

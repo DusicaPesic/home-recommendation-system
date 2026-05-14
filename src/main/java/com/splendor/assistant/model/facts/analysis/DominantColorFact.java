@@ -1,0 +1,29 @@
+package com.splendor.assistant.model.facts.analysis;
+
+import com.splendor.assistant.model.GemColor;
+import java.util.Objects;
+
+public class DominantColorFact {
+    private final GemColor color;
+
+    public DominantColorFact(GemColor color) {
+        this.color = color;
+    }
+
+    public GemColor getColor() {
+        return color;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DominantColorFact)) return false;
+        DominantColorFact that = (DominantColorFact) o;
+        return color == that.color;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(color);
+    }
+}

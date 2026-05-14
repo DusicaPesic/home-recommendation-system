@@ -1,0 +1,121 @@
+package rules
+
+import com.splendor.assistant.model.facts.analysis.AlmostPurchasableCardFact;
+import com.splendor.assistant.model.BoardState;
+import com.splendor.assistant.model.Card;
+import com.splendor.assistant.model.CardEfficiency;
+import com.splendor.assistant.model.facts.analysis.CardEfficiencyFact;
+import com.splendor.assistant.model.facts.explanation.DecisionFact;
+import com.splendor.assistant.model.facts.explanation.DecisionLevel;
+import com.splendor.assistant.model.facts.analysis.DominantColorFact;
+import com.splendor.assistant.model.GamePhase;
+import com.splendor.assistant.model.facts.analysis.GamePhaseFact;
+import com.splendor.assistant.model.GameState;
+import com.splendor.assistant.model.GemColor;
+import com.splendor.assistant.model.GoalType;
+import com.splendor.assistant.model.Move;
+import com.splendor.assistant.model.facts.scoring.MoveScoreFact;
+import com.splendor.assistant.model.facts.scoring.MoveTotalScoreFact;
+import com.splendor.assistant.model.MoveType;
+import com.splendor.assistant.model.facts.analysis.NeededColorFact;
+import com.splendor.assistant.model.facts.analysis.OpponentThreatCardFact;
+import com.splendor.assistant.model.PlayerState;
+import com.splendor.assistant.model.facts.analysis.PurchasableCardFact;
+import com.splendor.assistant.model.facts.strategy.StrategicGoalFact;
+import com.splendor.assistant.model.facts.analysis.SupportsEfficiencyEngineFact;
+import com.splendor.assistant.model.facts.analysis.TokenLimitRiskFact;
+
+rule "Goal buy very efficient engine card"
+when
+    $card: Card()
+    PurchasableCardFact(card == $card)
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.VERY_HIGH)
+    SupportsEfficiencyEngineFact(card == $card)
+then
+    insertLogical(StrategicGoalFact.card(GoalType.BUY_CARD, $card));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("PURCHASABLE_CARD", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+end
+
+rule "Goal buy high efficiency early engine card"
+when
+    $card: Card()
+    PurchasableCardFact(card == $card)
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.HIGH)
+    GamePhaseFact(phase == GamePhase.EARLY_GAME)
+    SupportsEfficiencyEngineFact(card == $card)
+then
+    insertLogical(StrategicGoalFact.card(GoalType.BUY_CARD, $card));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("PURCHASABLE_CARD", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.HIGH), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("GAME_PHASE", GamePhase.EARLY_GAME), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUY_CARD, $card), DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+end
+
+rule "Goal reserve very efficient card"
+when
+    PlayerState(reservedCards.size() < 3)
+    $card: Card()
+    CardEfficiencyFact(card == $card, efficiency == CardEfficiency.VERY_HIGH)
+    SupportsEfficiencyEngineFact(card == $card)
+    not PurchasableCardFact(card == $card)
+then
+    insertLogical(StrategicGoalFact.card(GoalType.RESERVE_CARD, $card));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.RESERVE_CARD, $card), DecisionFact.analysis("CARD_EFFICIENCY", $card, CardEfficiency.VERY_HIGH), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.RESERVE_CARD, $card), DecisionFact.analysis("SUPPORTS_EFFICIENCY_ENGINE", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.RESERVE_CARD, $card), DecisionFact.base("player has fewer than three reserved cards and card is not purchasable"), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from base fact"));
+end
+
+rule "Goal build dominant color"
+when
+    DominantColorFact($color: color)
+    not GamePhaseFact(phase == GamePhase.LATE_GAME)
+then
+    insertLogical(StrategicGoalFact.color(GoalType.BUILD_DOMINANT_COLOR, $color));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUILD_DOMINANT_COLOR, $color), DecisionFact.analysis("DOMINANT_COLOR", $color), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BUILD_DOMINANT_COLOR, $color), DecisionFact.base("game is not in late phase"), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from base fact"));
+end
+
+rule "Goal block opponent"
+when
+    PlayerState(reservedCards.size() < 3)
+    OpponentThreatCardFact($card: card)
+then
+    insertLogical(StrategicGoalFact.card(GoalType.BLOCK_OPPONENT, $card));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BLOCK_OPPONENT, $card), DecisionFact.analysis("OPPONENT_THREAT_CARD", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.BLOCK_OPPONENT, $card), DecisionFact.base("player has space to reserve a card"), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from base fact"));
+end
+
+rule "Goal collect needed color"
+when
+    BoardState($board: this)
+    NeededColorFact($color: color)
+    eval($board.bankTokenCount($color) > 0)
+then
+    insertLogical(StrategicGoalFact.color(GoalType.COLLECT_TOKENS, $color));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.COLLECT_TOKENS, $color), DecisionFact.analysis("NEEDED_COLOR", $color), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.COLLECT_TOKENS, $color), DecisionFact.base("bank has available " + $color + " tokens"), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from base fact"));
+end
+
+rule "Goal play reserved card"
+when
+    $player: PlayerState()
+    $card: Card()
+    eval($player.hasReserved($card))
+    PurchasableCardFact(card == $card)
+then
+    insertLogical(StrategicGoalFact.card(GoalType.PLAY_RESERVED_CARD, $card));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.PLAY_RESERVED_CARD, $card), DecisionFact.analysis("PURCHASABLE_CARD", $card), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.PLAY_RESERVED_CARD, $card), DecisionFact.base($card.getId() + " is in player's reserved cards"), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from base fact"));
+end
+
+rule "Goal manage token limit"
+when
+    TokenLimitRiskFact()
+then
+    insertLogical(StrategicGoalFact.flag(GoalType.MANAGE_TOKEN_LIMIT));
+    insertLogical(DecisionFact.of(DecisionFact.goal(GoalType.MANAGE_TOKEN_LIMIT), DecisionFact.analysis("TOKEN_LIMIT_RISK"), DecisionLevel.STRATEGIC_GOAL, "strategic goal derived from analysis"));
+end
+
+
