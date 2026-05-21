@@ -1,0 +1,162 @@
+@startuml
+title Splendor Assistant - Layered Fact Classes
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 45
+skinparam ranksep 55
+
+left to right direction
+
+package "Input facts" {
+  class PlayerState {
+    -prestigePoints: int
+    -tokens: EnumMap<GemColor, Integer>
+    -goldTokens: int
+    -bonuses: EnumMap<GemColor, Integer>
+    -reservedCards: List<Card>
+    +missingTokensFor(card: Card): int
+    +canPay(card: Card): boolean
+    +needsColorFor(card: Card, color: GemColor): boolean
+  }
+
+  class BoardState {
+    -bankTokens: EnumMap<GemColor, Integer>
+    +bankTokenCount(color: GemColor): int
+  }
+
+  class Card {
+    -id: String
+    -level: int
+    -colorBonus: GemColor
+    -prestigePoints: int
+    -cost: EnumMap<GemColor, Integer>
+    +costOf(color: GemColor): int
+    +getTotalCost(): int
+  }
+
+  class Move {
+    -id: String
+    -type: MoveType
+    -card: Card
+    -takenTokens: EnumMap<GemColor, Integer>
+    -score: int
+  }
+}
+
+package "Layer 1 - Analysis facts" {
+  class GamePhaseFact {
+    -phase: GamePhase
+  }
+
+  class CardEfficiencyFact {
+    -card: Card
+    -efficiency: CardEfficiency
+  }
+
+  class DominantColorFact {
+    -color: GemColor
+  }
+
+  class PurchasableCardFact {
+    -card: Card
+  }
+
+  class AlmostPurchasableCardFact {
+    -card: Card
+  }
+
+  class OpponentThreatCardFact {
+    -card: Card
+  }
+
+  class NeededColorFact {
+    -color: GemColor
+  }
+
+  class SupportsEfficiencyEngineFact {
+    -card: Card
+  }
+
+  class TokenLimitRiskFact
+}
+
+package "Layer 2 - Strategic goal facts" {
+  class StrategicGoalFact {
+    -type: GoalType
+    -card: Card
+    -color: GemColor
+    +card(type: GoalType, card: Card): StrategicGoalFact
+    +color(type: GoalType, color: GemColor): StrategicGoalFact
+    +flag(type: GoalType): StrategicGoalFact
+  }
+}
+
+package "Layer 3 - Scoring facts" {
+  class MoveScoreFact {
+    -move: Move
+    -points: int
+    -reason: String
+    -prerequisiteKeys: List<String>
+  }
+
+  class MoveTotalScoreFact {
+    -move: Move
+    -totalScore: int
+  }
+}
+
+package "Explanation facts" {
+  class DecisionFact {
+    -conclusion: String
+    -prerequisite: String
+    -level: DecisionLevel
+    -explanation: String
+  }
+}
+
+package "Enums used by facts" {
+  enum GemColor {
+    WHITE
+    BLUE
+    GREEN
+    RED
+    BLACK
+  }
+
+  enum MoveType {
+    BUY_CARD
+    RESERVE_CARD
+    TAKE_TOKENS
+  }
+
+  enum GamePhase {
+    EARLY_GAME
+    MID_GAME
+    LATE_GAME
+  }
+
+  enum CardEfficiency {
+    VERY_HIGH
+    HIGH
+    LOW
+  }
+
+  enum GoalType {
+    BUY_CARD
+    RESERVE_CARD
+    BUILD_DOMINANT_COLOR
+    BLOCK_OPPONENT
+    COLLECT_TOKENS
+    PLAY_RESERVED_CARD
+    MANAGE_TOKEN_LIMIT
+  }
+
+  enum DecisionLevel {
+    ANALYSIS
+    STRATEGIC_GOAL
+    MOVE_SCORE
+  }
+}
+
+@enduml

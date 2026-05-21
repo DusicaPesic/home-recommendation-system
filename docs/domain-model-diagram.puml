@@ -1,0 +1,171 @@
+@startuml
+title Splendor Assistant - Domain Model
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 55
+skinparam ranksep 45
+
+left to right direction
+
+class GameState {
+  -player: PlayerState
+  -opponent: PlayerState
+  -board: BoardState
+  +GameState(player: PlayerState, opponent: PlayerState, board: BoardState)
+  +getPlayer(): PlayerState
+  +getOpponent(): PlayerState
+  +getBoard(): BoardState
+}
+
+class PlayerState {
+  -prestigePoints: int
+  -tokens: EnumMap<GemColor, Integer>
+  -goldTokens: int
+  -bonuses: EnumMap<GemColor, Integer>
+  -reservedCards: List<Card>
+  -purchasedCards: List<Card>
+  +PlayerState(prestigePoints: int)
+  +tokenCount(color: GemColor): int
+  +bonusCount(color: GemColor): int
+  +getTotalTokens(): int
+  +reserve(card: Card): void
+  +purchase(card: Card): void
+  +hasReserved(card: Card): boolean
+  +missingTokensFor(card: Card): int
+  +canPay(card: Card): boolean
+  +needsColorFor(card: Card, color: GemColor): boolean
+}
+
+class BoardState {
+  -visibleCards: List<Card>
+  -nobles: List<Noble>
+  -bankTokens: EnumMap<GemColor, Integer>
+  -bankGoldTokens: int
+  +BoardState()
+  +getVisibleCards(): List<Card>
+  +addVisibleCard(card: Card): void
+  +getNobles(): List<Noble>
+  +addNoble(noble: Noble): void
+  +bankTokenCount(color: GemColor): int
+  +setBankToken(color: GemColor, count: int): void
+}
+
+class Card {
+  -id: String
+  -level: int
+  -colorBonus: GemColor
+  -prestigePoints: int
+  -cost: EnumMap<GemColor, Integer>
+  +Card(id: String, level: int, colorBonus: GemColor, prestigePoints: int, cost: Map<GemColor, Integer>)
+  +costOf(color: GemColor): int
+  +getTotalCost(): int
+}
+
+class Noble {
+  -id: String
+  -requiredBonuses: EnumMap<GemColor, Integer>
+  -prestigePoints: int
+  +Noble(id: String, requiredBonuses: Map<GemColor, Integer>, prestigePoints: int)
+  +noble(id: String, white: int, blue: int, green: int, red: int, black: int): Noble
+}
+
+class Move {
+  -id: String
+  -type: MoveType
+  -card: Card
+  -takenTokens: EnumMap<GemColor, Integer>
+  -score: int
+  +Move(id: String, type: MoveType, card: Card, takenTokens: Map<GemColor, Integer>)
+  +buy(card: Card, reserved: boolean): Move
+  +reserve(card: Card): Move
+  +take(id: String, tokens: Map<GemColor, Integer>): Move
+  +takes(color: GemColor): boolean
+  +getTakenTokenCount(): int
+  +takesThreeDifferentColors(): boolean
+}
+
+class Recommendation {
+  -rankedMoves: List<Move>
+  -recommendedMove: Move
+  -explanationViews: Map<Move, ExplanationView>
+  +Recommendation(rankedMoves: List<Move>, recommendedMove: Move, explanationViews: Map<Move, ExplanationView>)
+  +getRankedMoves(): List<Move>
+  +getRecommendedMove(): Move
+  +explainView(move: Move): ExplanationView
+  +getExplanationView(): ExplanationView
+}
+
+class ExplanationView {
+  -totalScore: int
+  -positiveScoreLines: List<ScoreLine>
+  -negativeScoreLines: List<ScoreLine>
+  -scoreTree: ExplanationTreeNode
+  -impactChecks: List<ImpactCheck>
+}
+
+class ScoreLine {
+  -points: int
+  -reason: String
+  +isPositive(): boolean
+  +getFormattedPoints(): String
+}
+
+class ImpactCheck {
+  -question: String
+  -impacted: boolean
+  +getAnswer(): String
+}
+
+class ExplanationTreeNode {
+  -label: String
+  -children: List<ExplanationTreeNode>
+  +addChild(child: ExplanationTreeNode): void
+}
+
+enum GemColor {
+  WHITE
+  BLUE
+  GREEN
+  RED
+  BLACK
+}
+
+enum MoveType {
+  BUY_CARD
+  RESERVE_CARD
+  TAKE_TOKENS
+}
+
+GameState *-- "1" PlayerState : player
+GameState *-- "1" PlayerState : opponent
+GameState *-- "1" BoardState : board
+
+PlayerState o-- "0..3" Card : reservedCards
+PlayerState o-- "0..*" Card : purchasedCards
+PlayerState --> GemColor : tokens
+PlayerState --> GemColor : bonuses
+
+BoardState o-- "0..12" Card : visibleCards
+BoardState o-- "0..3" Noble : nobles
+BoardState --> GemColor : bankTokens
+
+Card --> "1" GemColor : colorBonus
+Card --> GemColor : cost
+Noble --> GemColor : requiredBonuses
+
+Move --> "1" MoveType : type
+Move --> "0..1" Card : card
+Move --> GemColor : takenTokens
+
+Recommendation o-- "0..*" Move : rankedMoves
+Recommendation --> "0..1" Move : recommendedMove
+Recommendation --> "0..*" ExplanationView : explanationViews
+
+ExplanationView o-- "0..*" ScoreLine : positiveScoreLines
+ExplanationView o-- "0..*" ScoreLine : negativeScoreLines
+ExplanationView o-- "0..*" ImpactCheck : impactChecks
+ExplanationView *-- "1" ExplanationTreeNode : scoreTree
+ExplanationTreeNode o-- "0..*" ExplanationTreeNode : children
+
+@enduml
