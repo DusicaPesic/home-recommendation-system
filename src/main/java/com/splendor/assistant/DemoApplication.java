@@ -110,7 +110,7 @@ public class DemoApplication {
 
         // player
         PlayerState player = new PlayerState(6);
-        player.setToken(GemColor.WHITE, 7);
+        player.setToken(GemColor.WHITE, 2);
         player.setToken(GemColor.BLUE, 1);
         player.setToken(GemColor.GREEN, 1);
         player.setGoldTokens(1);

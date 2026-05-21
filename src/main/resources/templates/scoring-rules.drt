@@ -1,0 +1,47 @@
+template header
+ruleName
+movePattern
+conditions
+points
+reason
+scorePrerequisites
+decisionFacts
+
+package rules
+
+import com.splendor.assistant.model.facts.analysis.AlmostPurchasableCardFact;
+import com.splendor.assistant.model.BoardState;
+import com.splendor.assistant.model.Card;
+import com.splendor.assistant.model.CardEfficiency;
+import com.splendor.assistant.model.facts.analysis.CardEfficiencyFact;
+import com.splendor.assistant.model.facts.explanation.DecisionFact;
+import com.splendor.assistant.model.facts.explanation.DecisionLevel;
+import com.splendor.assistant.model.facts.analysis.DominantColorFact;
+import com.splendor.assistant.model.GamePhase;
+import com.splendor.assistant.model.facts.analysis.GamePhaseFact;
+import com.splendor.assistant.model.GameState;
+import com.splendor.assistant.model.GemColor;
+import com.splendor.assistant.model.GoalType;
+import com.splendor.assistant.model.Move;
+import com.splendor.assistant.model.facts.scoring.MoveScoreFact;
+import com.splendor.assistant.model.facts.scoring.MoveTotalScoreFact;
+import com.splendor.assistant.model.MoveType;
+import com.splendor.assistant.model.facts.analysis.NeededColorFact;
+import com.splendor.assistant.model.facts.analysis.OpponentThreatCardFact;
+import com.splendor.assistant.model.PlayerState;
+import com.splendor.assistant.model.facts.analysis.PurchasableCardFact;
+import com.splendor.assistant.model.facts.strategy.StrategicGoalFact;
+import com.splendor.assistant.model.facts.analysis.SupportsEfficiencyEngineFact;
+
+template "scoring-rules"
+
+rule "@{ruleName}"
+when
+    @{movePattern}
+@{conditions}
+then
+    insertLogical(new MoveScoreFact($move, @{points}, "@{reason}"@{scorePrerequisites}));
+@{decisionFacts}
+end
+
+end template

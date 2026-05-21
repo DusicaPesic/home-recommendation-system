@@ -15,8 +15,6 @@ import com.splendor.assistant.model.explanation.ImpactCheck;
 import com.splendor.assistant.model.explanation.ScoreLine;
 import com.splendor.assistant.model.facts.explanation.DecisionFact;
 import com.splendor.assistant.model.facts.scoring.MoveScoreFact;
-import org.kie.api.KieServices;
-import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.QueryResults;
 
@@ -30,21 +28,21 @@ import java.util.Map;
 import java.util.Set;
 
 public class RecommendationService {
-    private final KieContainer kieContainer;
     private final MoveGenerator moveGenerator;
+    private final SplendorKieSessionFactory kieSessionFactory;
 
     public RecommendationService() {
-        this(KieServices.Factory.get().getKieClasspathContainer(), new MoveGenerator());
+        this(new MoveGenerator(), new SplendorKieSessionFactory());
     }
 
-    public RecommendationService(KieContainer kieContainer, MoveGenerator moveGenerator) {
-        this.kieContainer = kieContainer;
+    public RecommendationService(MoveGenerator moveGenerator, SplendorKieSessionFactory kieSessionFactory) {
         this.moveGenerator = moveGenerator;
+        this.kieSessionFactory = kieSessionFactory;
     }
 
     public Recommendation recommend(GameState state) {
         List<Move> legalMoves = moveGenerator.generate(state);
-        KieSession session = kieContainer.newKieSession("splendorKSession");
+        KieSession session = newKieSession();
         try {
             insertCurrentState(session, state);
             insertColors(session);
@@ -62,6 +60,10 @@ public class RecommendationService {
         } finally {
             session.dispose();
         }
+    }
+
+    private KieSession newKieSession() {
+        return kieSessionFactory.newKieSession();
     }
 
     private void insertCards(KieSession session, BoardState board) {
