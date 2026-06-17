@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Splendor Assistant</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>Splendor Assistant</h1>
+        <p id="turnStatus">Loading game...</p>
+      </div>
+      <div class="actions">
+        <button id="newGame" type="button">New game</button>
+        <button id="refresh" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <section id="event" class="event"></section>
+    <section id="players" class="players"></section>
+
+    <section class="layout">
+      <section class="board">
+        <section>
+          <h2>Noble tiles</h2>
+          <div id="nobles" class="nobles"></div>
+        </section>
+
+        <section class="levels">
+          <div class="level" data-level="3">
+            <div class="deck">Deck III <strong id="deck3">0</strong></div>
+            <div id="level3" class="cards"></div>
+          </div>
+          <div class="level" data-level="2">
+            <div class="deck">Deck II <strong id="deck2">0</strong></div>
+            <div id="level2" class="cards"></div>
+          </div>
+          <div class="level" data-level="1">
+            <div class="deck">Deck I <strong id="deck1">0</strong></div>
+            <div id="level1" class="cards"></div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Tokens</h2>
+          <div id="bankTokens" class="bank"></div>
+        </section>
+      </section>
+
+      <aside class="recommendation">
+        <div class="summary">
+          <span class="label">Recommended move</span>
+          <strong id="bestMove">No recommendation yet</strong>
+          <button id="playRecommended" type="button">Play recommended</button>
+        </div>
+        <div id="error" class="error" hidden></div>
+        <div id="moves" class="moves"></div>
+      </aside>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

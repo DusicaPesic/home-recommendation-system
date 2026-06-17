@@ -36,17 +36,20 @@ public class MoveGenerator {
             }
         }
 
-        generateTakeThreeDifferent(board, moves);
-        generateTakeTwoSame(board, moves);
+        generateTakeThreeDifferent(player, board, moves);
+        generateTakeTwoSame(player, board, moves);
         return moves;
     }
 
-    private void generateTakeThreeDifferent(BoardState board, List<Move> moves) {
+    private void generateTakeThreeDifferent(PlayerState player, BoardState board, List<Move> moves) {
         GemColor[] colors = GemColor.values();
         for (int i = 0; i < colors.length; i++) {
             for (int j = i + 1; j < colors.length; j++) {
                 for (int k = j + 1; k < colors.length; k++) {
-                    if (board.bankTokenCount(colors[i]) > 0 && board.bankTokenCount(colors[j]) > 0 && board.bankTokenCount(colors[k]) > 0) {
+                    if (player.getTotalTokens() + 3 <= 10
+                            && board.bankTokenCount(colors[i]) > 0
+                            && board.bankTokenCount(colors[j]) > 0
+                            && board.bankTokenCount(colors[k]) > 0) {
                         EnumMap<GemColor, Integer> tokens = emptyTokens();
                         tokens.put(colors[i], 1);
                         tokens.put(colors[j], 1);
@@ -58,9 +61,9 @@ public class MoveGenerator {
         }
     }
 
-    private void generateTakeTwoSame(BoardState board, List<Move> moves) {
+    private void generateTakeTwoSame(PlayerState player, BoardState board, List<Move> moves) {
         for (GemColor color : GemColor.values()) {
-            if (board.bankTokenCount(color) >= 4) {
+            if (player.getTotalTokens() + 2 <= 10 && board.bankTokenCount(color) >= 4) {
                 Map<GemColor, Integer> tokens = emptyTokens();
                 tokens.put(color, 2);
                 moves.add(Move.take(color + "+" + color, tokens));

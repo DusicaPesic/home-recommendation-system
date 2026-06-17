@@ -8,6 +8,7 @@
   <description>Rule-based smart assistant for the board game Splendor</description>
   <properties>
     <java.version>11</java.version>
+    <spring.boot.version>2.7.18</spring.boot.version>
     <drools.version>7.49.0.Final</drools.version>
     <junit.version>5.10.2</junit.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -15,6 +16,11 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>${spring.boot.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.kie</groupId>
       <artifactId>kie-api</artifactId>
@@ -39,7 +45,8 @@
       <groupId>org.mvel</groupId>
       <artifactId>mvel2</artifactId>
       <version>2.5.2.Final</version>
-    </dependency>    <dependency>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>${junit.version}</version>
@@ -65,6 +72,14 @@
         <version>3.2.0</version>
         <configuration>
           <mainClass>com.splendor.assistant.DemoApplication</mainClass>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring.boot.version}</version>
+        <configuration>
+          <mainClass>com.splendor.assistant.WebApplication</mainClass>
         </configuration>
       </plugin>
     </plugins>

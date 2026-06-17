@@ -26,12 +26,29 @@ public class BoardState {
         visibleCards.add(card);
     }
 
+    public boolean removeVisibleCard(Card card) {
+        return visibleCards.remove(card);
+    }
+
+    public void replaceVisibleCard(Card oldCard, Card newCard) {
+        int index = visibleCards.indexOf(oldCard);
+        if (index >= 0) {
+            visibleCards.set(index, newCard);
+        } else {
+            visibleCards.add(newCard);
+        }
+    }
+
     public List<Noble> getNobles() {
         return Collections.unmodifiableList(nobles);
     }
 
     public void addNoble(Noble noble) {
         nobles.add(noble);
+    }
+
+    public boolean removeNoble(Noble noble) {
+        return nobles.remove(noble);
     }
 
     public Map<GemColor, Integer> getBankTokens() {
@@ -46,11 +63,19 @@ public class BoardState {
         bankTokens.put(color, count);
     }
 
+    public void addBankToken(GemColor color, int count) {
+        bankTokens.put(color, bankTokenCount(color) + count);
+    }
+
     public int getBankGoldTokens() {
         return bankGoldTokens;
     }
 
     public void setBankGoldTokens(int bankGoldTokens) {
         this.bankGoldTokens = bankGoldTokens;
+    }
+
+    public void addBankGoldTokens(int count) {
+        this.bankGoldTokens += count;
     }
 }

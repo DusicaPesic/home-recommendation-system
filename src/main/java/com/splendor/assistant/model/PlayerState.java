@@ -30,6 +30,10 @@ public class PlayerState {
         this.prestigePoints = prestigePoints;
     }
 
+    public void addPrestigePoints(int points) {
+        this.prestigePoints += points;
+    }
+
     public Map<GemColor, Integer> getTokens() {
         return Collections.unmodifiableMap(tokens);
     }
@@ -42,12 +46,20 @@ public class PlayerState {
         tokens.put(color, count);
     }
 
+    public void addToken(GemColor color, int count) {
+        tokens.put(color, tokenCount(color) + count);
+    }
+
     public int getGoldTokens() {
         return goldTokens;
     }
 
     public void setGoldTokens(int goldTokens) {
         this.goldTokens = goldTokens;
+    }
+
+    public void addGoldTokens(int count) {
+        this.goldTokens += count;
     }
 
     public Map<GemColor, Integer> getBonuses() {
@@ -62,6 +74,10 @@ public class PlayerState {
         bonuses.put(color, count);
     }
 
+    public void addBonus(GemColor color, int count) {
+        bonuses.put(color, bonusCount(color) + count);
+    }
+
     public List<Card> getReservedCards() {
         return Collections.unmodifiableList(reservedCards);
     }
@@ -70,12 +86,22 @@ public class PlayerState {
         reservedCards.add(card);
     }
 
+    public boolean removeReserved(Card card) {
+        return reservedCards.remove(card);
+    }
+
     public List<Card> getPurchasedCards() {
         return Collections.unmodifiableList(purchasedCards);
     }
 
     public void purchase(Card card) {
         purchasedCards.add(card);
+    }
+
+    public void buy(Card card) {
+        purchase(card);
+        addBonus(card.getColorBonus(), 1);
+        addPrestigePoints(card.getPrestigePoints());
     }
 
     public int getTotalTokens() {
