@@ -15,50 +15,64 @@
       </div>
       <div class="actions">
         <button id="newGame" type="button">New game</button>
+        <button id="midGame" type="button">Mid-game preset</button>
         <button id="refresh" type="button">Refresh</button>
       </div>
     </header>
 
-    <section id="event" class="event"></section>
-    <section id="players" class="players"></section>
+    <section class="state-panel">
+      <section id="event" class="event"></section>
+      <section id="players" class="players"></section>
+    </section>
 
-    <section class="layout">
-      <section class="board">
-        <section>
-          <h2>Noble tiles</h2>
-          <div id="nobles" class="nobles"></div>
-        </section>
-
-        <section class="levels">
-          <div class="level" data-level="3">
-            <div class="deck">Deck III <strong id="deck3">0</strong></div>
-            <div id="level3" class="cards"></div>
-          </div>
-          <div class="level" data-level="2">
-            <div class="deck">Deck II <strong id="deck2">0</strong></div>
-            <div id="level2" class="cards"></div>
-          </div>
-          <div class="level" data-level="1">
-            <div class="deck">Deck I <strong id="deck1">0</strong></div>
-            <div id="level1" class="cards"></div>
-          </div>
-        </section>
-
-        <section>
-          <h2>Tokens</h2>
-          <div id="bankTokens" class="bank"></div>
-        </section>
+    <section class="board">
+      <section>
+        <h2>Noble tiles</h2>
+        <div id="nobles" class="nobles"></div>
       </section>
 
-      <aside class="recommendation">
-        <div class="summary">
-          <span class="label">Recommended move</span>
-          <strong id="bestMove">No recommendation yet</strong>
-          <button id="playRecommended" type="button">Play recommended</button>
+      <section class="levels">
+        <div class="level" data-level="3">
+          <div class="deck">Deck III <strong id="deck3">0</strong></div>
+          <div id="level3" class="cards"></div>
         </div>
-        <div id="error" class="error" hidden></div>
-        <div id="moves" class="moves"></div>
-      </aside>
+        <div class="level" data-level="2">
+          <div class="deck">Deck II <strong id="deck2">0</strong></div>
+          <div id="level2" class="cards"></div>
+        </div>
+        <div class="level" data-level="1">
+          <div class="deck">Deck I <strong id="deck1">0</strong></div>
+          <div id="level1" class="cards"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Tokens</h2>
+        <div id="bankTokens" class="bank"></div>
+      </section>
+    </section>
+
+    <section class="recommendation">
+      <div class="summary">
+        <span class="label">Recommended move</span>
+        <strong id="bestMove">No recommendation yet</strong>
+        <button id="playRecommended" type="button">Play recommended</button>
+      </div>
+      <div id="error" class="error" hidden></div>
+      <div class="moves-layout">
+        <section>
+          <h2>Possible moves</h2>
+          <div id="moves" class="moves"></div>
+        </section>
+        <section class="move-details">
+          <div class="details-head">
+            <span class="label">Selected move</span>
+            <button id="playSelected" type="button">Play selected</button>
+          </div>
+          <strong id="selectedMoveTitle">No move selected</strong>
+          <div id="selectedMoveDetails" class="selected-details"></div>
+        </section>
+      </div>
     </section>
   </main>
   <script src="/app.js"></script>

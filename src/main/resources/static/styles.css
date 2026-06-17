@@ -75,18 +75,24 @@ h3 {
 
 .event {
   min-height: 38px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: #f6f8fa;
+}
+
+.state-panel {
   border: 1px solid #cfd8df;
   border-radius: 8px;
   background: #ffffff;
-  padding: 10px 12px;
-  margin-bottom: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
 }
 
 .players {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 12px;
 }
 
 .player {
@@ -128,12 +134,6 @@ h3 {
   margin-top: 10px;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(620px, 1fr) minmax(360px, 430px);
-  gap: 14px;
-}
-
 .board,
 .recommendation {
   border: 1px solid #cfd8df;
@@ -145,6 +145,8 @@ h3 {
 .board {
   display: grid;
   gap: 16px;
+  margin-bottom: 14px;
+  background: #d5bdaf;
 }
 
 .nobles,
@@ -206,22 +208,27 @@ h3 {
   border-top: 5px solid #252b31;
 }
 
-.points {
-  width: 34px;
-  height: 34px;
+.card-meta {
   display: grid;
-  place-items: center;
-  margin: 10px 0;
-  border-radius: 50%;
-  background: #17202a;
-  color: #ffffff;
-  font-weight: 800;
+  grid-template-columns: 58px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
 }
 
-.bonus {
+.card-meta > span {
   color: #5f6c7b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.card-meta > strong {
   font-size: 13px;
-  font-weight: 700;
+}
+
+.card-meta.price {
+  align-items: start;
 }
 
 .counts,
@@ -273,10 +280,16 @@ h3 {
 
 .summary {
   display: grid;
-  gap: 8px;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  align-items: center;
   border-bottom: 1px solid #d8dee6;
   padding-bottom: 12px;
   margin-bottom: 12px;
+}
+
+.summary .label {
+  grid-column: 1 / -1;
 }
 
 .label {
@@ -302,32 +315,75 @@ h3 {
 .moves {
   display: grid;
   gap: 10px;
-  max-height: calc(100vh - 300px);
-  overflow: auto;
-  padding-right: 4px;
 }
 
-.move {
+.moves-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.42fr) minmax(460px, 0.58fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.move-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
   border: 1px solid #d8dee6;
   border-radius: 8px;
   background: #ffffff;
+  color: #17202a;
+  min-height: 54px;
+  padding: 10px 12px;
+  text-align: left;
 }
 
-.move summary {
-  cursor: pointer;
-  padding: 12px;
+.move-item.selected {
+  border-color: #2f6f73;
+  box-shadow: inset 4px 0 0 #2f6f73;
 }
 
-.move summary strong {
+.move-item span {
+  display: grid;
+  gap: 3px;
+}
+
+.move-item em {
+  color: #2f6f73;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.move-item b {
   color: #2f6f73;
 }
 
-.play {
-  margin: 0 12px 10px;
+.move-details {
+  border: 1px solid #d8dee6;
+  border-radius: 8px;
+  background: #ffffff;
+  min-height: 360px;
+  padding: 14px;
+}
+
+.details-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.selected-details {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
 }
 
 .block {
-  padding: 0 12px 12px;
+  padding: 0 0 12px;
 }
 
 .block ul {
@@ -337,23 +393,72 @@ h3 {
   padding-left: 18px;
 }
 
+.tree-block {
+  border-top: 1px solid #e3e8ed;
+  margin-top: 2px;
+  padding-top: 12px;
+}
+
+.decision-tree,
+.decision-tree ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  position: relative;
+}
+
+.decision-tree ul {
+  border-left: 1px solid #cbd4dc;
+  margin-left: 6px;
+}
+
+.decision-tree li {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 8px 12px;
+  position: relative;
+}
+
+.decision-tree li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 10px;
+  border-top: 1px solid #cbd4dc;
+}
+
+.decision-tree > li::before {
+  display: none;
+}
+
+.decision-tree span {
+  display: inline-block;
+  border: 1px solid #d8dee6;
+  border-radius: 6px;
+  background: #f8fafb;
+  color: #344150;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 6px 8px;
+}
+
 .muted,
 .empty {
   color: #6c7683;
 }
 
 @media (max-width: 1080px) {
-  .layout,
   .players {
     grid-template-columns: 1fr;
   }
 
-  .layout {
-    display: flex;
-    flex-direction: column;
+  .level {
+    grid-template-columns: 1fr;
   }
 
-  .level {
+  .moves-layout {
     grid-template-columns: 1fr;
   }
 }
@@ -371,5 +476,9 @@ h3 {
   .nobles,
   .cards {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
   }
 }

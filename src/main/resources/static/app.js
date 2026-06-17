@@ -16,13 +16,20 @@ const COLOR_SYMBOLS = {
 };
 
 let game = null;
+let selectedMoveId = null;
 
 document.querySelector("#newGame").addEventListener("click", newGame);
+document.querySelector("#midGame").addEventListener("click", loadMidGamePreset);
 document.querySelector("#refresh").addEventListener("click", loadGame);
 document.querySelector("#playRecommended").addEventListener("click", () => {
   const move = game?.recommendation?.recommendedMove;
   if (move) {
     playMove(move.id);
+  }
+});
+document.querySelector("#playSelected").addEventListener("click", () => {
+  if (selectedMoveId) {
+    playMove(selectedMoveId);
   }
 });
 
@@ -32,6 +39,7 @@ async function loadGame() {
   clearError();
   const response = await fetch("/api/game");
   game = await response.json();
+  selectRecommendedMove();
   render();
 }
 
@@ -39,6 +47,15 @@ async function newGame() {
   clearError();
   const response = await fetch("/api/game/new", { method: "POST" });
   game = await response.json();
+  selectRecommendedMove();
+  render();
+}
+
+async function loadMidGamePreset() {
+  clearError();
+  const response = await fetch("/api/game/mid-game", { method: "POST" });
+  game = await response.json();
+  selectRecommendedMove();
   render();
 }
 
@@ -56,6 +73,7 @@ async function playMove(moveId) {
   }
 
   game = await response.json();
+  selectRecommendedMove();
   render();
 }
 
@@ -132,6 +150,7 @@ function renderRecommendation() {
   document.querySelector("#bestMove").textContent = formatMove(best);
   document.querySelector("#playRecommended").disabled = !best || game.finished;
   renderMoves(recommendation.rankedMoves || []);
+  renderSelectedMove();
 }
 
 function renderMoves(moves) {
@@ -143,28 +162,44 @@ function renderMoves(moves) {
   }
 
   moves.slice(0, 20).forEach((move, index) => {
-    const details = document.createElement("details");
-    details.className = "move";
-    details.open = index === 0;
-
-    const summary = document.createElement("summary");
-    summary.innerHTML = `<span>${index + 1}. ${escapeHtml(formatMove(move))}</span><strong>${move.score}</strong>`;
-    details.appendChild(summary);
-
-    const play = document.createElement("button");
-    play.type = "button";
-    play.className = "play";
-    play.textContent = "Play move";
-    play.disabled = game.finished;
-    play.addEventListener("click", () => playMove(move.id));
-    details.appendChild(play);
-
-    const explanation = move.explanation || {};
-    details.appendChild(renderScoreLines("Positive reasons", explanation.positiveScoreLines || []));
-    details.appendChild(renderScoreLines("Negative reasons", explanation.negativeScoreLines || []));
-    details.appendChild(renderImpactChecks(explanation.impactChecks || []));
-    container.appendChild(details);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = move.id === selectedMoveId ? "move-item selected" : "move-item";
+    button.innerHTML = `
+      <span>
+        <strong>${index + 1}. ${escapeHtml(formatMove(move))}</strong>
+        ${move.id === game.recommendation?.recommendedMove?.id ? '<em>Recommended</em>' : ""}
+      </span>
+      <b>${move.score}</b>
+    `;
+    button.addEventListener("click", () => {
+      selectedMoveId = move.id;
+      renderRecommendation();
+    });
+    container.appendChild(button);
   });
+}
+
+function renderSelectedMove() {
+  const move = selectedMove();
+  const title = document.querySelector("#selectedMoveTitle");
+  const details = document.querySelector("#selectedMoveDetails");
+  const playSelected = document.querySelector("#playSelected");
+
+  details.innerHTML = "";
+  playSelected.disabled = !move || game.finished;
+  if (!move) {
+    title.textContent = "No move selected";
+    details.innerHTML = '<p class="empty">Select a move from the list.</p>';
+    return;
+  }
+
+  title.textContent = `${formatMove(move)} - score ${move.score}`;
+  const explanation = move.explanation || {};
+  details.appendChild(renderScoreLines("Positive reasons", explanation.positiveScoreLines || []));
+  details.appendChild(renderScoreLines("Negative reasons", explanation.negativeScoreLines || []));
+  details.appendChild(renderImpactChecks(explanation.impactChecks || []));
+  details.appendChild(renderDecisionTree(explanation.scoreTree));
 }
 
 function renderCard(card, boardCard) {
@@ -173,11 +208,20 @@ function renderCard(card, boardCard) {
   node.innerHTML = `
     <div class="card-top">
       <strong>${escapeHtml(card.id)}</strong>
-      <span>L${card.level}</span>
+      <span>Level ${card.level}</span>
     </div>
-    <div class="points">${card.prestigePoints}</div>
-    <div class="bonus">${COLOR_LABELS[card.colorBonus] || card.colorBonus}</div>
-    <div class="cost">${renderColorCounts(card.cost)}</div>
+    <div class="card-meta">
+      <span>Points</span>
+      <strong>${card.prestigePoints}</strong>
+    </div>
+    <div class="card-meta">
+      <span>Bonus</span>
+      <strong>${COLOR_LABELS[card.colorBonus] || card.colorBonus}</strong>
+    </div>
+    <div class="card-meta price">
+      <span>Price</span>
+      ${renderColorCounts(card.cost)}
+    </div>
   `;
   if (boardCard) {
     const playableMoves = game.recommendation?.rankedMoves || [];
@@ -221,6 +265,41 @@ function renderImpactChecks(checks) {
   return section;
 }
 
+function renderDecisionTree(tree) {
+  const section = document.createElement("section");
+  section.className = "block tree-block";
+  section.innerHTML = "<h3>Decision tree</h3>";
+
+  if (!tree) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No tree available.";
+    section.appendChild(empty);
+    return section;
+  }
+
+  const root = document.createElement("ul");
+  root.className = "decision-tree";
+  root.appendChild(renderTreeNode(tree));
+  section.appendChild(root);
+  return section;
+}
+
+function renderTreeNode(node) {
+  const item = document.createElement("li");
+  const label = document.createElement("span");
+  label.textContent = node.label || "";
+  item.appendChild(label);
+
+  const children = node.children || [];
+  if (children.length) {
+    const list = document.createElement("ul");
+    children.forEach(child => list.appendChild(renderTreeNode(child)));
+    item.appendChild(list);
+  }
+  return item;
+}
+
 function visibleCards(level) {
   return (game.board.visibleCards || []).filter(card => card.level === level);
 }
@@ -260,6 +339,15 @@ function tokenSummary(tokens) {
     .filter(color => (tokens?.[color] || 0) > 0)
     .map(color => `${COLOR_SYMBOLS[color]}x${tokens[color]}`)
     .join(" ");
+}
+
+function selectRecommendedMove() {
+  selectedMoveId = game?.recommendation?.recommendedMove?.id || null;
+}
+
+function selectedMove() {
+  const moves = game?.recommendation?.rankedMoves || [];
+  return moves.find(move => move.id === selectedMoveId) || game?.recommendation?.recommendedMove || null;
 }
 
 function showError(message) {

@@ -42,6 +42,11 @@ public class GameController {
         return toView(gameService.newGame(), gameService.recommendation());
     }
 
+    @PostMapping("/mid-game")
+    public GameViewDto midGamePreset() {
+        return toView(gameService.midGamePreset(), gameService.recommendation());
+    }
+
     @GetMapping("/recommendation")
     public RecommendationResponseDto recommendation() {
         return mapper.toDto(gameService.recommendation());

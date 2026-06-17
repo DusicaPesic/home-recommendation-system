@@ -43,6 +43,11 @@ public class SplendorGameService {
         return game;
     }
 
+    public synchronized SplendorGame midGamePreset() {
+        game = gameFactory.midGamePreset();
+        return game;
+    }
+
     public synchronized SplendorGame currentGame() {
         return game;
     }
