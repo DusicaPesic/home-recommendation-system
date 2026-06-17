@@ -72,17 +72,25 @@ Pokretanje testova:
 mvn clean test
 ```
 
-Pokretanje demo aplikacije:
+Pokretanje web aplikacije:
 
 ```powershell
-mvn exec:java
+mvn "-Dmaven.test.skip=true" spring-boot:run
 ```
 
-Demo prvo prikazuje preporuceni potez i rangiranu listu legalnih poteza. Nakon toga korisnik moze da izabere broj poteza za koji zeli detaljno objasnjenje.
+Aplikacija se otvara na `http://localhost:8080`. Ako je port zauzet:
+
+```powershell
+mvn "-Dmaven.test.skip=true" spring-boot:run "-Dspring-boot.run.arguments=--server.port=8000"
+```
+
+Web aplikacija prikazuje stanje partije za 2 igraca, tablu, legalne poteze, preporuceni potez i detaljno objasnjenje za selektovani potez.
 
 ## Glavni fajlovi
 
-- `src/main/java/com/splendor/assistant/DemoApplication.java`
+- `src/main/java/com/splendor/assistant/WebApplication.java`
+- `src/main/java/com/splendor/assistant/game/`
+- `src/main/java/com/splendor/assistant/web/`
 - `src/main/java/com/splendor/assistant/service/RecommendationService.java`
 - `src/main/java/com/splendor/assistant/service/MoveGenerator.java`
 - `src/main/java/com/splendor/assistant/model/facts/analysis/`
