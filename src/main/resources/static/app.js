@@ -17,6 +17,8 @@ const COLOR_SYMBOLS = {
 
 let game = null;
 let selectedMoveId = null;
+let discardSelection = emptyTokenSelection();
+let discardGoldSelection = 0;
 
 document.querySelector("#newGame").addEventListener("click", newGame);
 document.querySelector("#midGame").addEventListener("click", loadMidGamePreset);
@@ -32,6 +34,7 @@ document.querySelector("#playSelected").addEventListener("click", () => {
     playMove(selectedMoveId);
   }
 });
+document.querySelector("#discardSubmit").addEventListener("click", discardSelectedTokens);
 
 loadGame();
 
@@ -39,6 +42,7 @@ async function loadGame() {
   clearError();
   const response = await fetch("/api/game");
   game = await response.json();
+  resetDiscardSelection();
   selectRecommendedMove();
   render();
 }
@@ -47,6 +51,7 @@ async function newGame() {
   clearError();
   const response = await fetch("/api/game/new", { method: "POST" });
   game = await response.json();
+  resetDiscardSelection();
   selectRecommendedMove();
   render();
 }
@@ -55,6 +60,7 @@ async function loadMidGamePreset() {
   clearError();
   const response = await fetch("/api/game/mid-game", { method: "POST" });
   game = await response.json();
+  resetDiscardSelection();
   selectRecommendedMove();
   render();
 }
@@ -73,6 +79,29 @@ async function playMove(moveId) {
   }
 
   game = await response.json();
+  resetDiscardSelection();
+  selectRecommendedMove();
+  render();
+}
+
+async function discardSelectedTokens() {
+  clearError();
+  const response = await fetch("/api/game/discard", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tokens: discardSelection,
+      goldTokens: discardGoldSelection
+    })
+  });
+
+  if (!response.ok) {
+    showError(await response.text());
+    return;
+  }
+
+  game = await response.json();
+  resetDiscardSelection();
   selectRecommendedMove();
   render();
 }
@@ -81,6 +110,7 @@ function render() {
   renderStatus();
   renderPlayers();
   renderBoard();
+  renderDiscardPanel();
   renderRecommendation();
 }
 
@@ -89,6 +119,8 @@ function renderStatus() {
   const event = document.querySelector("#event");
   if (game.finished) {
     status.textContent = `Winner: Player ${game.winnerPlayerNumber}`;
+  } else if (game.waitingForDiscard) {
+    status.textContent = `Player ${game.discardPlayerNumber} must discard ${game.discardCount} token(s)`;
   } else {
     status.textContent = `Player ${game.currentPlayerNumber} is on turn`;
   }
@@ -147,8 +179,10 @@ function renderNobles() {
 function renderRecommendation() {
   const recommendation = game.recommendation || {};
   const best = recommendation.recommendedMove;
-  document.querySelector("#bestMove").textContent = formatMove(best);
-  document.querySelector("#playRecommended").disabled = !best || game.finished;
+  document.querySelector("#bestMove").textContent = game.waitingForDiscard
+    ? "Discard tokens to continue"
+    : formatMove(best);
+  document.querySelector("#playRecommended").disabled = !best || game.finished || game.waitingForDiscard;
   renderMoves(recommendation.rankedMoves || []);
   renderSelectedMove();
 }
@@ -156,6 +190,10 @@ function renderRecommendation() {
 function renderMoves(moves) {
   const container = document.querySelector("#moves");
   container.innerHTML = "";
+  if (game.waitingForDiscard) {
+    container.innerHTML = '<p class="empty">Resolve token discard before playing another move.</p>';
+    return;
+  }
   if (!moves.length) {
     container.innerHTML = '<p class="empty">No legal moves found.</p>';
     return;
@@ -187,7 +225,7 @@ function renderSelectedMove() {
   const playSelected = document.querySelector("#playSelected");
 
   details.innerHTML = "";
-  playSelected.disabled = !move || game.finished;
+  playSelected.disabled = !move || game.finished || game.waitingForDiscard;
   if (!move) {
     title.textContent = "No move selected";
     details.innerHTML = '<p class="empty">Select a move from the list.</p>';
@@ -200,6 +238,77 @@ function renderSelectedMove() {
   details.appendChild(renderScoreLines("Negative reasons", explanation.negativeScoreLines || []));
   details.appendChild(renderImpactChecks(explanation.impactChecks || []));
   details.appendChild(renderDecisionTree(explanation.scoreTree));
+}
+
+function renderDiscardPanel() {
+  const panel = document.querySelector("#discardPanel");
+  const title = document.querySelector("#discardTitle");
+  const controls = document.querySelector("#discardControls");
+  const submit = document.querySelector("#discardSubmit");
+
+  panel.hidden = !game.waitingForDiscard;
+  controls.innerHTML = "";
+  if (!game.waitingForDiscard) {
+    return;
+  }
+
+  const player = game.discardPlayerNumber === 1 ? game.playerOne : game.playerTwo;
+  title.textContent = `Player ${game.discardPlayerNumber}, discard ${game.discardCount} token(s)`;
+
+  COLORS.forEach(color => {
+    controls.appendChild(renderDiscardControl(
+      color,
+      player.tokens?.[color] || 0,
+      discardSelection[color] || 0,
+      value => {
+        discardSelection[color] = value;
+        renderDiscardPanel();
+      }
+    ));
+  });
+  controls.appendChild(renderDiscardControl(
+    "GOLD",
+    player.goldTokens || 0,
+    discardGoldSelection,
+    value => {
+      discardGoldSelection = value;
+      renderDiscardPanel();
+    }
+  ));
+
+  const selected = selectedDiscardCount();
+  submit.disabled = selected !== game.discardCount;
+  submit.textContent = `Discard selected (${selected}/${game.discardCount})`;
+}
+
+function renderDiscardControl(color, available, selected, onChange) {
+  const node = document.createElement("div");
+  node.className = "discard-control";
+  node.innerHTML = `
+    <strong class="${color.toLowerCase()}">${COLOR_SYMBOLS[color]} ${COLOR_LABELS[color] || "Gold"}</strong>
+    <span>Available: ${available}</span>
+  `;
+
+  const actions = document.createElement("div");
+  actions.className = "stepper";
+  const minus = document.createElement("button");
+  minus.type = "button";
+  minus.textContent = "-";
+  minus.disabled = selected <= 0;
+  minus.addEventListener("click", () => onChange(selected - 1));
+
+  const value = document.createElement("b");
+  value.textContent = selected;
+
+  const plus = document.createElement("button");
+  plus.type = "button";
+  plus.textContent = "+";
+  plus.disabled = selected >= available || selectedDiscardCount() >= game.discardCount;
+  plus.addEventListener("click", () => onChange(selected + 1));
+
+  actions.append(minus, value, plus);
+  node.appendChild(actions);
+  return node;
 }
 
 function renderCard(card, boardCard) {
@@ -342,12 +451,28 @@ function tokenSummary(tokens) {
 }
 
 function selectRecommendedMove() {
-  selectedMoveId = game?.recommendation?.recommendedMove?.id || null;
+  selectedMoveId = game?.waitingForDiscard ? null : game?.recommendation?.recommendedMove?.id || null;
 }
 
 function selectedMove() {
   const moves = game?.recommendation?.rankedMoves || [];
   return moves.find(move => move.id === selectedMoveId) || game?.recommendation?.recommendedMove || null;
+}
+
+function emptyTokenSelection() {
+  return COLORS.reduce((result, color) => {
+    result[color] = 0;
+    return result;
+  }, {});
+}
+
+function resetDiscardSelection() {
+  discardSelection = emptyTokenSelection();
+  discardGoldSelection = 0;
+}
+
+function selectedDiscardCount() {
+  return COLORS.reduce((sum, color) => sum + (discardSelection[color] || 0), discardGoldSelection || 0);
 }
 
 function showError(message) {

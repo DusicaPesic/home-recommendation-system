@@ -135,7 +135,8 @@ h3 {
 }
 
 .board,
-.recommendation {
+.recommendation,
+.discard-panel {
   border: 1px solid #cfd8df;
   border-radius: 8px;
   background: #ffffff;
@@ -286,6 +287,53 @@ h3 {
   border-bottom: 1px solid #d8dee6;
   padding-bottom: 12px;
   margin-bottom: 12px;
+}
+
+.discard-panel {
+  display: grid;
+  grid-template-columns: 220px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border-color: #b88918;
+  background: #fff9eb;
+  margin-bottom: 12px;
+}
+
+.discard-panel[hidden] {
+  display: none;
+}
+
+.discard-controls {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.discard-control {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #ead7a2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.discard-control span {
+  color: #5f6c7b;
+  font-size: 12px;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  gap: 6px;
+  align-items: center;
+  text-align: center;
+}
+
+.stepper button {
+  min-height: 28px;
+  padding: 0;
 }
 
 .summary .label {
@@ -461,6 +509,14 @@ h3 {
   .moves-layout {
     grid-template-columns: 1fr;
   }
+
+  .discard-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .discard-controls {
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -480,5 +536,9 @@ h3 {
 
   .summary {
     grid-template-columns: 1fr;
+  }
+
+  .discard-controls {
+    grid-template-columns: 1fr 1fr;
   }
 }

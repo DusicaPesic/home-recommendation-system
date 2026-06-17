@@ -19,6 +19,9 @@ public class SplendorGame {
     private boolean finished;
     private Integer winnerPlayerNumber;
     private String lastEvent = "New game started.";
+    private boolean waitingForDiscard;
+    private int discardPlayerNumber;
+    private int discardCount;
 
     public SplendorGame(PlayerState playerOne, PlayerState playerTwo, BoardState board, Map<Integer, Deque<Card>> decksByLevel) {
         this.playerOne = playerOne;
@@ -62,6 +65,30 @@ public class SplendorGame {
 
     public void setLastEvent(String lastEvent) {
         this.lastEvent = lastEvent;
+    }
+
+    public boolean isWaitingForDiscard() {
+        return waitingForDiscard;
+    }
+
+    public int getDiscardPlayerNumber() {
+        return discardPlayerNumber;
+    }
+
+    public int getDiscardCount() {
+        return discardCount;
+    }
+
+    public void requireDiscard(int playerNumber, int count) {
+        waitingForDiscard = true;
+        discardPlayerNumber = playerNumber;
+        discardCount = count;
+    }
+
+    public void clearDiscard() {
+        waitingForDiscard = false;
+        discardPlayerNumber = 0;
+        discardCount = 0;
     }
 
     public PlayerState currentPlayer() {

@@ -13,6 +13,9 @@ public class GameViewDto {
     private Integer winnerPlayerNumber;
     private String lastEvent;
     private RecommendationResponseDto recommendation;
+    private boolean waitingForDiscard;
+    private int discardPlayerNumber;
+    private int discardCount;
 
     public PlayerStateDto getPlayerOne() {
         return playerOne;
@@ -84,5 +87,29 @@ public class GameViewDto {
 
     public void setRecommendation(RecommendationResponseDto recommendation) {
         this.recommendation = recommendation;
+    }
+
+    public boolean isWaitingForDiscard() {
+        return waitingForDiscard;
+    }
+
+    public void setWaitingForDiscard(boolean waitingForDiscard) {
+        this.waitingForDiscard = waitingForDiscard;
+    }
+
+    public int getDiscardPlayerNumber() {
+        return discardPlayerNumber;
+    }
+
+    public void setDiscardPlayerNumber(int discardPlayerNumber) {
+        this.discardPlayerNumber = discardPlayerNumber;
+    }
+
+    public int getDiscardCount() {
+        return discardCount;
+    }
+
+    public void setDiscardCount(int discardCount) {
+        this.discardCount = discardCount;
     }
 }

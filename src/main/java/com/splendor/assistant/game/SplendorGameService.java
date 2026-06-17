@@ -14,7 +14,10 @@ import com.splendor.assistant.service.RecommendationService;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -53,12 +56,19 @@ public class SplendorGameService {
     }
 
     public synchronized Recommendation recommendation() {
+        if (game.isWaitingForDiscard()) {
+            return new Recommendation(Collections.emptyList(), null, Collections.emptyMap());
+        }
         return recommendationService.recommend(game.recommendationState());
     }
 
     public synchronized MoveApplicationResult play(String moveId) {
         if (game.isFinished()) {
             return new MoveApplicationResult("Game is already finished.");
+        }
+        if (game.isWaitingForDiscard()) {
+            return new MoveApplicationResult("Player " + game.getDiscardPlayerNumber()
+                    + " must discard " + game.getDiscardCount() + " token(s) before the next move.");
         }
 
         GameState state = game.recommendationState();
@@ -88,6 +98,10 @@ public class SplendorGameService {
         if (player.getPrestigePoints() >= 15) {
             game.finishWithWinner(movedPlayer);
             message += " Player " + movedPlayer + " wins with " + player.getPrestigePoints() + " points.";
+        } else if (player.getTotalTokens() > 10) {
+            int discardCount = player.getTotalTokens() - 10;
+            game.requireDiscard(movedPlayer, discardCount);
+            message += " Player " + movedPlayer + " must discard " + discardCount + " token(s).";
         } else {
             game.switchTurn();
             message += " Player " + game.getCurrentPlayerNumber() + " is on turn.";
@@ -96,10 +110,58 @@ public class SplendorGameService {
         return new MoveApplicationResult(message);
     }
 
-    private void applyTakeTokens(PlayerState player, BoardState board, Move move) {
-        if (player.getTotalTokens() + move.getTakenTokenCount() > 10) {
-            throw new IllegalArgumentException("Token limit would be exceeded.");
+    public synchronized MoveApplicationResult discardTokens(Map<GemColor, Integer> coloredTokens, int goldTokens) {
+        if (!game.isWaitingForDiscard()) {
+            throw new IllegalStateException("No discard is pending.");
         }
+
+        PlayerState player = game.currentPlayer();
+        int totalDiscard = goldTokens;
+        EnumMap<GemColor, Integer> discard = new EnumMap<>(GemColor.class);
+        for (GemColor color : GemColor.values()) {
+            int count = coloredTokens == null ? 0 : coloredTokens.getOrDefault(color, 0);
+            if (count < 0) {
+                throw new IllegalArgumentException("Discard count cannot be negative.");
+            }
+            if (count > player.tokenCount(color)) {
+                throw new IllegalArgumentException("Player does not have enough " + color + " tokens to discard.");
+            }
+            discard.put(color, count);
+            totalDiscard += count;
+        }
+
+        if (goldTokens < 0) {
+            throw new IllegalArgumentException("Discard count cannot be negative.");
+        }
+        if (goldTokens > player.getGoldTokens()) {
+            throw new IllegalArgumentException("Player does not have enough gold tokens to discard.");
+        }
+        if (totalDiscard != game.getDiscardCount()) {
+            throw new IllegalArgumentException("Exactly " + game.getDiscardCount() + " token(s) must be discarded.");
+        }
+
+        for (GemColor color : GemColor.values()) {
+            int count = discard.getOrDefault(color, 0);
+            if (count > 0) {
+                player.addToken(color, -count);
+                game.getBoard().addBankToken(color, count);
+            }
+        }
+        if (goldTokens > 0) {
+            player.addGoldTokens(-goldTokens);
+            game.getBoard().addBankGoldTokens(goldTokens);
+        }
+
+        int movedPlayer = game.getCurrentPlayerNumber();
+        game.clearDiscard();
+        game.switchTurn();
+        String message = "Player " + movedPlayer + " discarded " + totalDiscard
+                + " token(s). Player " + game.getCurrentPlayerNumber() + " is on turn.";
+        game.setLastEvent(message);
+        return new MoveApplicationResult(message);
+    }
+
+    private void applyTakeTokens(PlayerState player, BoardState board, Move move) {
         for (GemColor color : GemColor.values()) {
             int count = move.getTakenTokens().getOrDefault(color, 0);
             if (count > 0) {

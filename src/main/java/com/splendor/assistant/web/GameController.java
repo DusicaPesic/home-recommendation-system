@@ -3,6 +3,7 @@ package com.splendor.assistant.web;
 import com.splendor.assistant.game.SplendorGame;
 import com.splendor.assistant.game.SplendorGameService;
 import com.splendor.assistant.model.Recommendation;
+import com.splendor.assistant.web.dto.DiscardRequestDto;
 import com.splendor.assistant.web.dto.GameViewDto;
 import com.splendor.assistant.web.dto.MoveRequestDto;
 import com.splendor.assistant.web.dto.RecommendationResponseDto;
@@ -58,6 +59,12 @@ public class GameController {
         return toView(gameService.currentGame(), gameService.recommendation());
     }
 
+    @PostMapping("/discard")
+    public GameViewDto discard(@RequestBody DiscardRequestDto request) {
+        gameService.discardTokens(request.getTokens(), request.getGoldTokens());
+        return toView(gameService.currentGame(), gameService.recommendation());
+    }
+
     private GameViewDto toView(SplendorGame game, Recommendation recommendation) {
         GameViewDto view = new GameViewDto();
         view.setPlayerOne(mapper.toDto(game.getPlayerOne()));
@@ -68,6 +75,9 @@ public class GameController {
         view.setWinnerPlayerNumber(game.getWinnerPlayerNumber());
         view.setLastEvent(game.getLastEvent());
         view.setRecommendation(mapper.toDto(recommendation));
+        view.setWaitingForDiscard(game.isWaitingForDiscard());
+        view.setDiscardPlayerNumber(game.getDiscardPlayerNumber());
+        view.setDiscardCount(game.getDiscardCount());
         Map<Integer, Integer> deckCounts = new HashMap<>();
         game.getDecksByLevel().forEach((level, cards) -> deckCounts.put(level, cards.size()));
         view.setDeckCounts(deckCounts);
