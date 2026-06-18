@@ -8,6 +8,27 @@ skinparam ranksep 45
 
 left to right direction
 
+class SplendorGame {
+  -playerOne: PlayerState
+  -playerTwo: PlayerState
+  -board: BoardState
+  -decksByLevel: Map<Integer, Deque<Card>>
+  -currentPlayerNumber: int
+  -finished: boolean
+  -winnerPlayerNumber: Integer
+  -lastEvent: String
+  -waitingForDiscard: boolean
+  -discardPlayerNumber: int
+  -discardCount: int
+  +currentPlayer(): PlayerState
+  +opponent(): PlayerState
+  +recommendationState(): GameState
+  +switchTurn(): void
+  +finishWithWinner(playerNumber: int): void
+  +requireDiscard(playerNumber: int, count: int): void
+  +clearDiscard(): void
+}
+
 class GameState {
   -player: PlayerState
   -opponent: PlayerState
@@ -29,8 +50,14 @@ class PlayerState {
   +tokenCount(color: GemColor): int
   +bonusCount(color: GemColor): int
   +getTotalTokens(): int
+  +setToken(color: GemColor, count: int): void
+  +addToken(color: GemColor, count: int): void
+  +addGoldTokens(count: int): void
+  +addBonus(color: GemColor, count: int): void
   +reserve(card: Card): void
+  +removeReserved(card: Card): boolean
   +purchase(card: Card): void
+  +buy(card: Card): void
   +hasReserved(card: Card): boolean
   +missingTokensFor(card: Card): int
   +canPay(card: Card): boolean
@@ -45,10 +72,16 @@ class BoardState {
   +BoardState()
   +getVisibleCards(): List<Card>
   +addVisibleCard(card: Card): void
+  +removeVisibleCard(card: Card): boolean
+  +replaceVisibleCard(oldCard: Card, newCard: Card): void
   +getNobles(): List<Noble>
   +addNoble(noble: Noble): void
+  +removeNoble(noble: Noble): boolean
   +bankTokenCount(color: GemColor): int
   +setBankToken(color: GemColor, count: int): void
+  +addBankToken(color: GemColor, count: int): void
+  +setBankGoldTokens(bankGoldTokens: int): void
+  +addBankGoldTokens(count: int): void
 }
 
 class Card {
@@ -137,9 +170,15 @@ enum MoveType {
   TAKE_TOKENS
 }
 
-GameState *-- "1" PlayerState : player
-GameState *-- "1" PlayerState : opponent
-GameState *-- "1" BoardState : board
+SplendorGame *-- "1" PlayerState : playerOne
+SplendorGame *-- "1" PlayerState : playerTwo
+SplendorGame *-- "1" BoardState : board
+SplendorGame o-- "0..*" Card : decksByLevel
+SplendorGame --> GameState : recommendationState
+
+GameState --> "1" PlayerState : player
+GameState --> "1" PlayerState : opponent
+GameState --> "1" BoardState : board
 
 PlayerState o-- "0..3" Card : reservedCards
 PlayerState o-- "0..*" Card : purchasedCards

@@ -171,7 +171,19 @@ function renderNobles() {
   (game.board.nobles || []).forEach(noble => {
     const node = document.createElement("article");
     node.className = "noble";
-    node.innerHTML = `<strong>${noble.id}</strong><span>${noble.prestigePoints} pts</span>${renderColorCounts(noble.requiredBonuses)}`;
+    node.innerHTML = `
+      <div class="card-top">
+        <strong>${noble.id}</strong>
+      </div>
+      <div class="card-meta">
+        <span>Points</span>
+        <strong>${noble.prestigePoints}</strong>
+      </div>
+      <div class="card-meta price">
+        <span>Requires</span>
+        ${renderColorCounts(noble.requiredBonuses)}
+      </div>
+    `;
     nobles.appendChild(node);
   });
 }

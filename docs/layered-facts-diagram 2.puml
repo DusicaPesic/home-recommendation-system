@@ -9,19 +9,31 @@ skinparam ranksep 55
 left to right direction
 
 package "Input facts" {
+  class GameState {
+    -player: PlayerState
+    -opponent: PlayerState
+    -board: BoardState
+  }
+
   class PlayerState {
     -prestigePoints: int
     -tokens: EnumMap<GemColor, Integer>
     -goldTokens: int
     -bonuses: EnumMap<GemColor, Integer>
     -reservedCards: List<Card>
+    -purchasedCards: List<Card>
+    +getTotalTokens(): int
     +missingTokensFor(card: Card): int
     +canPay(card: Card): boolean
+    +hasReserved(card: Card): boolean
     +needsColorFor(card: Card, color: GemColor): boolean
   }
 
   class BoardState {
+    -visibleCards: List<Card>
+    -nobles: List<Noble>
     -bankTokens: EnumMap<GemColor, Integer>
+    -bankGoldTokens: int
     +bankTokenCount(color: GemColor): int
   }
 
@@ -41,6 +53,9 @@ package "Input facts" {
     -card: Card
     -takenTokens: EnumMap<GemColor, Integer>
     -score: int
+    +takes(color: GemColor): boolean
+    +getTakenTokenCount(): int
+    +takesThreeDifferentColors(): boolean
   }
 }
 
@@ -158,5 +173,33 @@ package "Enums used by facts" {
     MOVE_SCORE
   }
 }
+
+GameState --> PlayerState : player
+GameState --> PlayerState : opponent
+GameState --> BoardState : board
+
+PlayerState --> Card : reservedCards
+PlayerState --> Card : purchasedCards
+BoardState --> Card : visibleCards
+BoardState --> Noble : nobles
+Move --> Card : card
+
+GamePhaseFact --> GamePhase
+CardEfficiencyFact --> Card
+CardEfficiencyFact --> CardEfficiency
+DominantColorFact --> GemColor
+PurchasableCardFact --> Card
+AlmostPurchasableCardFact --> Card
+OpponentThreatCardFact --> Card
+NeededColorFact --> GemColor
+SupportsEfficiencyEngineFact --> Card
+
+StrategicGoalFact --> GoalType
+StrategicGoalFact --> Card
+StrategicGoalFact --> GemColor
+
+MoveScoreFact --> Move
+MoveTotalScoreFact --> Move
+DecisionFact --> DecisionLevel
 
 @enduml
