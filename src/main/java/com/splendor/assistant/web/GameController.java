@@ -8,11 +8,13 @@ import com.splendor.assistant.web.dto.GameViewDto;
 import com.splendor.assistant.web.dto.MoveRequestDto;
 import com.splendor.assistant.web.dto.RecommendationResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,13 +57,21 @@ public class GameController {
 
     @PostMapping("/moves")
     public GameViewDto play(@RequestBody MoveRequestDto request) {
-        gameService.play(request.getMoveId());
+        try {
+            gameService.play(request.getMoveId());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
         return toView(gameService.currentGame(), gameService.recommendation());
     }
 
     @PostMapping("/discard")
     public GameViewDto discard(@RequestBody DiscardRequestDto request) {
-        gameService.discardTokens(request.getTokens(), request.getGoldTokens());
+        try {
+            gameService.discardTokens(request.getTokens(), request.getGoldTokens());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
         return toView(gameService.currentGame(), gameService.recommendation());
     }
 

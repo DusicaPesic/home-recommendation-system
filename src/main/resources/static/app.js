@@ -19,6 +19,7 @@ let game = null;
 let selectedMoveId = null;
 let discardSelection = emptyTokenSelection();
 let discardGoldSelection = 0;
+let requestInFlight = false;
 
 document.querySelector("#newGame").addEventListener("click", newGame);
 document.querySelector("#midGame").addEventListener("click", loadMidGamePreset);
@@ -66,7 +67,12 @@ async function loadMidGamePreset() {
 }
 
 async function playMove(moveId) {
+  if (requestInFlight) {
+    return;
+  }
   clearError();
+  requestInFlight = true;
+  render();
   const response = await fetch("/api/game/moves", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,17 +81,25 @@ async function playMove(moveId) {
 
   if (!response.ok) {
     showError(await response.text());
+    requestInFlight = false;
+    render();
     return;
   }
 
   game = await response.json();
+  requestInFlight = false;
   resetDiscardSelection();
   selectRecommendedMove();
   render();
 }
 
 async function discardSelectedTokens() {
+  if (requestInFlight) {
+    return;
+  }
   clearError();
+  requestInFlight = true;
+  render();
   const response = await fetch("/api/game/discard", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -97,10 +111,13 @@ async function discardSelectedTokens() {
 
   if (!response.ok) {
     showError(await response.text());
+    requestInFlight = false;
+    render();
     return;
   }
 
   game = await response.json();
+  requestInFlight = false;
   resetDiscardSelection();
   selectRecommendedMove();
   render();
@@ -194,7 +211,7 @@ function renderRecommendation() {
   document.querySelector("#bestMove").textContent = game.waitingForDiscard
     ? "Discard tokens to continue"
     : formatMove(best);
-  document.querySelector("#playRecommended").disabled = !best || game.finished || game.waitingForDiscard;
+  document.querySelector("#playRecommended").disabled = !best || game.finished || game.waitingForDiscard || requestInFlight;
   renderMoves(recommendation.rankedMoves || []);
   renderSelectedMove();
 }
@@ -211,7 +228,7 @@ function renderMoves(moves) {
     return;
   }
 
-  moves.slice(0, 20).forEach((move, index) => {
+  moves.forEach((move, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = move.id === selectedMoveId ? "move-item selected" : "move-item";
@@ -237,7 +254,7 @@ function renderSelectedMove() {
   const playSelected = document.querySelector("#playSelected");
 
   details.innerHTML = "";
-  playSelected.disabled = !move || game.finished || game.waitingForDiscard;
+  playSelected.disabled = !move || game.finished || game.waitingForDiscard || requestInFlight;
   if (!move) {
     title.textContent = "No move selected";
     details.innerHTML = '<p class="empty">Select a move from the list.</p>';
@@ -289,7 +306,7 @@ function renderDiscardPanel() {
   ));
 
   const selected = selectedDiscardCount();
-  submit.disabled = selected !== game.discardCount;
+  submit.disabled = selected !== game.discardCount || requestInFlight;
   submit.textContent = `Discard selected (${selected}/${game.discardCount})`;
 }
 
